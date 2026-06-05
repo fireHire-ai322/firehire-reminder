@@ -1,0 +1,13 @@
+{
+  "name": "firehire-caller-reminder",
+  "version": "1.0.0",
+  "description": "FireHire daily caller interview reminders via Discord",
+  "main": "src/send_reminders.js",
+  "scripts": {
+    "start": "node src/send_reminders.js"
+  },
+  "dependencies": {
+    "googleapis": "^140.0.1",
+    "node-fetch": "^2.7.0"
+  }
+}
