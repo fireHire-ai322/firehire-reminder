@@ -7,7 +7,7 @@ const fetch = require("node-fetch");
 const SPREADSHEET_ID  = process.env.SPREADSHEET_ID;
 const SHEET_NAME      = process.env.SHEET_NAME || "The Validation";
 const CALLERS_WEBHOOK = process.env.CALLERS_WEBHOOK_URL;
-const BOT_TOKEN       = process.env.DISCORD_BOT_TOKEN;
+const BOT_TOKEN       = process.env.DISCORD_TOKEN;
 const GOOGLE_CREDS    = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
 
 // ============================================================
