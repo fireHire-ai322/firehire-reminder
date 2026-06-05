@@ -1,33 +1,26 @@
 name: FireHire Caller Reminder
-
 on:
   schedule:
-    # كل يوم الساعة 1:00 PM UTC = 3:00 PM Cairo
     - cron: "0 13 * * *"
   workflow_dispatch:
-
 jobs:
   send-reminders:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
       - name: Install dependencies
-        run: pip install -r requirements.txt
-
+        run: pip install -r Requirements.txt
       - name: Run reminder script
         env:
-          DISCORD_TOKEN:              ${{ secrets.DISCORD_TOKEN }}
-          GUILD_ID:                   ${{ secrets.GUILD_ID }}
-          CALLERS_WEBHOOK_URL:        ${{ secrets.CALLERS_WEBHOOK_URL }}
-          SPREADSHEET_ID:             ${{ secrets.SPREADSHEET_ID }}
-          SHEET_NAME:                 ${{ secrets.SHEET_NAME }}
+          DISCORD_TOKEN:               ${{ secrets.DISCORD_TOKEN }}
+          GUILD_ID:                    ${{ secrets.GUILD_ID }}
+          CALLERS_WEBHOOK_URL:         ${{ secrets.CALLERS_WEBHOOK_URL }}
+          SPREADSHEET_ID:              ${{ secrets.SPREADSHEET_ID }}
+          SHEET_NAME:                  ${{ secrets.SHEET_NAME }}
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
-        run: python src/send_reminders.py
+        run: python "Send reminders.py"
