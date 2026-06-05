@@ -28,6 +28,6 @@ jobs:
           SPREADSHEET_ID:               ${{ secrets.SPREADSHEET_ID }}
           SHEET_NAME:                   ${{ secrets.SHEET_NAME }}
           CALLERS_WEBHOOK_URL:          ${{ secrets.CALLERS_WEBHOOK_URL }}
-          DISCORD_BOT_TOKEN:            ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_TOKEN:                ${{ secrets.DISCORD_TOKEN }}
           GOOGLE_SERVICE_ACCOUNT_JSON:  ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
         run: npm start
