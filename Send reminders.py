@@ -82,6 +82,7 @@ def get_todays_interviews():
             print(f"⚠️ Can't parse date: '{date_of_call}'")
             continue
 
+        print(f"🔍 {full_name} | raw='{date_of_call}' | parsed='{parsed_date}' | today='{today}' | match={parsed_date == today}")
         if parsed_date != today:
             continue
 
