@@ -22,7 +22,92 @@ CAIRO_TZ = pytz.timezone("Africa/Cairo")
 # ============================================================
 # Google Sheets
 # ============================================================
+def parse_date(date_str):
+    """بيفهم كل الـ formats الموجودة في الشيت"""
+    import re
+    date_str = date_str.strip()
+    if not date_str:
+        return None
+
+    # Format: "Jun , 7 Sunday  , 2026" أو "Jun , 30 Saturday , 2026"
+    m = re.match(r"(\w+)\s*,\s*(\d+)\s+\w+\s*,\s*(\d{4})", date_str)
+    if m:
+        month_str, day, year = m.group(1), m.group(2), m.group(3)
+        try:
+            return datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y").strftime("%Y-%m-%d")
+        except:
+            pass
+
+    # Format: "6/8/2026" أو "4/29/2026" — M/D/YYYY أمريكي
+    m = re.match(r"^(\d{1,2})/(\d{1,2})/(\d{4})$", date_str)
+    if m:
+        month, day, year = m.group(1), m.group(2), m.group(3)
+        try:
+            return datetime.strptime(f"{month}/{day}/{year}", "%m/%d/%Y").strftime("%Y-%m-%d")
+        except:
+            pass
+
+    # Format: "2026-06-08"
+    m = re.match(r"^(\d{4})-(\d{2})-(\d{2})", date_str)
+    if m:
+        return date_str[:10]
+
+    return None
+
+
 def get_todays_interviews():
+    creds = Credentials.from_service_account_info(
+        GOOGLE_CREDS,
+        scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"]
+    )
+    client = gspread.authorize(creds)
+    sheet  = client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
+    data   = sheet.get_all_records()
+
+    today = datetime.now(CAIRO_TZ).strftime("%Y-%m-%d")
+    print(f"🗓️ Today = {today} | Total rows = {len(data)}")
+
+    caller_map = {}
+
+    for row in data:
+        full_name    = str(row.get("Full Name", "")).strip()
+        company      = str(row.get("Company Name you are applying for", "")).strip()
+        caller       = str(row.get("Caller", "")).strip()
+        date_of_call = str(row.get("Date of Call", "")).strip()
+        call_time    = str(row.get("Call Time", "")).strip()
+
+        if not full_name or not caller or not date_of_call:
+            continue
+
+        parsed_date = parse_date(date_of_call)
+        if not parsed_date:
+            print(f"⚠️ Can't parse date: {date_of_call}")
+            continue
+
+        if parsed_date != today:
+            continue
+
+        print(f"✅ Match: {full_name} | {caller} | {parsed_date}")
+
+        try:
+            parsed_time = datetime.strptime(call_time, "%H:%M:%S")
+            time_str = parsed_time.strftime("%I:%M %p")
+        except:
+            try:
+                parsed_time = datetime.strptime(call_time, "%I:%M:%S %p")
+                time_str = parsed_time.strftime("%I:%M %p")
+            except:
+                time_str = call_time or "N/A"
+
+        if caller not in caller_map:
+            caller_map[caller] = []
+        caller_map[caller].append({
+            "name": full_name,
+            "company": company,
+            "time": time_str
+        })
+
+    return caller_mapdef get_todays_interviews():
     creds = Credentials.from_service_account_info(
         GOOGLE_CREDS,
         scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"]
