@@ -32,29 +32,37 @@ def get_todays_interviews():
     data   = sheet.get_all_records()
 
     today = datetime.now(CAIRO_TZ).strftime("%Y-%m-%d")
+    print(f"🗓️ Today = {today}")
+    print(f"📊 Total rows = {len(data)}")
 
-    caller_map = {}  # { "Amir": [ {name, company, time} ] }
+    caller_map = {}
 
     for row in data:
-        full_name   = str(row.get("Full Name", "")).strip()
-        company     = str(row.get("Company Name you are applying for", "")).strip()
-        caller      = str(row.get("Caller", "")).strip()
+        full_name    = str(row.get("Full Name", "")).strip()
+        company      = str(row.get("Company Name you are applying for", "")).strip()
+        caller       = str(row.get("Caller", "")).strip()
         date_of_call = str(row.get("Date of Call", "")).strip()
         call_time    = str(row.get("Call Time", "")).strip()
 
         if not full_name or not caller or not date_of_call:
             continue
 
-        # normalize date
+        print(f"🔍 Row: {full_name} | Caller={caller} | Date={date_of_call} | Time={call_time}")
+
         try:
             parsed_date = datetime.strptime(date_of_call[:10], "%Y-%m-%d").strftime("%Y-%m-%d")
         except:
-            continue
+            try:
+                parsed_date = datetime.strptime(date_of_call[:10], "%d/%m/%Y").strftime("%Y-%m-%d")
+            except:
+                print(f"⚠️ Can't parse date: {date_of_call}")
+                continue
+
+        print(f"✅ Parsed date = {parsed_date} | Match = {parsed_date == today}")
 
         if parsed_date != today:
             continue
 
-        # format time
         try:
             parsed_time = datetime.strptime(call_time, "%H:%M:%S")
             time_str = parsed_time.strftime("%I:%M %p")
@@ -70,7 +78,6 @@ def get_todays_interviews():
         })
 
     return caller_map
-
 # ============================================================
 # Discord
 # ============================================================
