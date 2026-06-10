@@ -1,6 +1,4 @@
 import discord
-from discord.ext import tasks
-from aiohttp import web
 import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
@@ -9,7 +7,7 @@ import asyncio
 import os
 import json
 import re
-import aiohttp as aiohttp_lib
+import aiohttp
 
 # ============================================================
 # Config
@@ -31,6 +29,7 @@ def parse_date(date_str):
     if not date_str:
         return None
 
+    # Format: "Jun , 7 Sunday  , 2026"
     m = re.match(r"(\w+)\s*,\s*(\d+)\s+\w+\s*,\s*(\d{4})", date_str)
     if m:
         try:
@@ -38,6 +37,7 @@ def parse_date(date_str):
         except:
             pass
 
+    # Format: "6/8/2026" M/D/YYYY
     m = re.match(r"^(\d{1,2})/(\d{1,2})/(\d{4})$", date_str)
     if m:
         try:
@@ -45,6 +45,7 @@ def parse_date(date_str):
         except:
             pass
 
+    # Format: "2026-06-08"
     if re.match(r"^\d{4}-\d{2}-\d{2}", date_str):
         return date_str[:10]
 
@@ -108,10 +109,14 @@ def get_todays_interviews():
     return caller_map
 
 # ============================================================
-# Webhook
+# Discord
 # ============================================================
+intents = discord.Intents.default()
+intents.members = True
+client = discord.Client(intents=intents)
+
 async def send_webhook(payload):
-    async with aiohttp_lib.ClientSession() as session:
+    async with aiohttp.ClientSession() as session:
         await session.post(WEBHOOK_URL, json=payload)
 
 def build_embed(caller_name, interviews, today, continued=False):
@@ -137,54 +142,29 @@ def build_embed(caller_name, interviews, today, continued=False):
         }]
     }
 
-# ============================================================
-# Discord Bot
-# ============================================================
-intents = discord.Intents.default()
-intents.members = True
-client = discord.Client(intents=intents)
-
-# عشان نتجنب إرسال الرسائل أكتر من مرة في نفس اليوم
-last_sent_date = None
-
-@tasks.loop(minutes=1)
-async def daily_reminder():
-    global last_sent_date
-
-    now     = datetime.now(CAIRO_TZ)
-    weekday = now.weekday()  # 0=Monday ... 6=Sunday
-
-    # تخطي الويك إند (السبت=5، الأحد=6)
-    if weekday >= 5:
-        return
-
-    # شغّل بس الساعة 3:00 عصراً (15:00) بتوقيت القاهرة
-    if not (now.hour == 15 and now.minute == 0):
-        return
-
-    today = now.strftime("%Y-%m-%d")
-
-    # تجنب الإرسال مرتين في نفس اليوم
-    if last_sent_date == today:
-        return
-
-    last_sent_date = today
-    print(f"⏰ Running daily reminder for {today}...")
+@client.event
+async def on_ready():
+    print(f"✅ Bot online: {client.user}")
 
     guild = client.get_guild(GUILD_ID)
     if not guild:
         print("❌ Guild not found")
+        await client.close()
         return
+
+    today = datetime.now(CAIRO_TZ).strftime("%Y-%m-%d")
 
     try:
         caller_map = get_todays_interviews()
     except Exception as e:
         print(f"❌ Error reading sheet: {e}")
+        await client.close()
         return
 
     if not caller_map:
         print("No interviews today.")
         await send_webhook({"content": "✅ No call interviews scheduled for today."})
+        await client.close()
         return
 
     for caller_name, interviews in caller_map.items():
@@ -210,7 +190,6 @@ async def daily_reminder():
                         print(f"⚠️ Can't DM {member.name}")
                 print(f"✅ DM sent to {caller_name} ({member.name})")
 
-        # بعت في القناة العامة — رسالة واحدة مجمعة لكل كولر
         chunks = [interviews[i:i+24] for i in range(0, len(interviews), 24)]
         for idx, chunk in enumerate(chunks):
             await send_webhook(build_embed(caller_name, chunk, today, continued=(idx > 0)))
@@ -219,40 +198,6 @@ async def daily_reminder():
         await asyncio.sleep(0.5)
 
     print("✅ All reminders sent.")
+    await client.close()
 
-
-@daily_reminder.before_loop
-async def before_reminder():
-    await client.wait_until_ready()
-    print("✅ Reminder loop ready.")
-
-
-@client.event
-async def on_ready():
-    print(f"✅ Bot online: {client.user}")
-    if not daily_reminder.is_running():
-        daily_reminder.start()
-
-# ============================================================
-# Web Server — عشان Koyeb/Render ميقفلوش البوت
-# ============================================================
-async def health_check(request):
-    return web.Response(text="FireHire Caller Bot is alive! 🔥")
-
-async def start_web_server():
-    app = web.Application()
-    app.router.add_get("/", health_check)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, "0.0.0.0", 8080)
-    await site.start()
-    print("🌐 Web server running on port 8080")
-
-# ============================================================
-# Main
-# ============================================================
-async def main():
-    await start_web_server()
-    await client.start(DISCORD_TOKEN)
-
-asyncio.run(main())
+client.run(DISCORD_TOKEN)
