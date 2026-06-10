@@ -29,7 +29,6 @@ def parse_date(date_str):
     if not date_str:
         return None
 
-    # Format: "Jun , 7 Sunday  , 2026"
     m = re.match(r"(\w+)\s*,\s*(\d+)\s+\w+\s*,\s*(\d{4})", date_str)
     if m:
         try:
@@ -37,7 +36,6 @@ def parse_date(date_str):
         except:
             pass
 
-    # Format: "6/8/2026" M/D/YYYY
     m = re.match(r"^(\d{1,2})/(\d{1,2})/(\d{4})$", date_str)
     if m:
         try:
@@ -45,7 +43,6 @@ def parse_date(date_str):
         except:
             pass
 
-    # Format: "2026-06-08"
     if re.match(r"^\d{4}-\d{2}-\d{2}", date_str):
         return date_str[:10]
 
@@ -59,22 +56,29 @@ def get_todays_interviews():
         GOOGLE_CREDS,
         scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"]
     )
-    client = gspread.authorize(creds)
-    sheet  = client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
+    gc     = gspread.authorize(creds)
+    sheet  = gc.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
+
     rows = sheet.get_all_values()
-headers = rows[0]
-# بنمسح الأعمدة الفاضية من الـ headers
-clean_headers = [h.strip() for h in headers]
-data = []
-for row in rows[1:]:
-    if not any(cell.strip() for cell in row):
-        continue  # بنتخطى الصفوف الفاضية خالص
-    row_dict = {}
-    for i, val in enumerate(row):
-        if i < len(clean_headers):
-            key = clean_headers[i] if clean_headers[i] else f"_col_{i}"
-            row_dict[key] = val
-    data.append(row_dict)
+    if not rows:
+        return {}
+
+    raw_headers = rows[0]
+    # تنظيف الـ headers وتجاهل الأعمدة الفاضية
+    headers = [h.strip() for h in raw_headers]
+
+    # بناء الداتا يدوياً بدل get_all_records
+    data = []
+    for row in rows[1:]:
+        # تخطي الصفوف الفاضية خالص
+        if not any(cell.strip() for cell in row):
+            continue
+        row_dict = {}
+        for i, val in enumerate(row):
+            if i < len(headers):
+                key = headers[i] if headers[i] else f"_col_{i}"
+                row_dict[key] = val
+        data.append(row_dict)
 
     today = datetime.now(CAIRO_TZ).strftime("%Y-%m-%d")
     print(f"🗓️ Today = {today} | Total rows = {len(data)}")
