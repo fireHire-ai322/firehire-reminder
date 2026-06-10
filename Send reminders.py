@@ -61,7 +61,7 @@ def get_todays_interviews():
     )
     client = gspread.authorize(creds)
     sheet  = client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
-    data   = sheet.get_all_records()
+    data = sheet.get_all_records(numericise_ignore=['all'])
 
     today = datetime.now(CAIRO_TZ).strftime("%Y-%m-%d")
     print(f"🗓️ Today = {today} | Total rows = {len(data)}")
