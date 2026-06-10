@@ -61,7 +61,20 @@ def get_todays_interviews():
     )
     client = gspread.authorize(creds)
     sheet  = client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
-    data = sheet.get_all_records(numericise_ignore=['all'])
+    rows = sheet.get_all_values()
+headers = rows[0]
+# بنمسح الأعمدة الفاضية من الـ headers
+clean_headers = [h.strip() for h in headers]
+data = []
+for row in rows[1:]:
+    if not any(cell.strip() for cell in row):
+        continue  # بنتخطى الصفوف الفاضية خالص
+    row_dict = {}
+    for i, val in enumerate(row):
+        if i < len(clean_headers):
+            key = clean_headers[i] if clean_headers[i] else f"_col_{i}"
+            row_dict[key] = val
+    data.append(row_dict)
 
     today = datetime.now(CAIRO_TZ).strftime("%Y-%m-%d")
     print(f"🗓️ Today = {today} | Total rows = {len(data)}")
